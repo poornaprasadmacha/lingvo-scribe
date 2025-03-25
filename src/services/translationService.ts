@@ -91,20 +91,10 @@ export async function translatePdf(
   try {
     toast.info("Processing PDF file...");
     
-    // We need to use a CDN version of PDF.js since we don't have direct access to install it
-    if (!window.pdfjsLib) {
+    // Ensure PDF.js is loaded
+    if (typeof window.pdfjsLib === 'undefined') {
       // Load PDF.js dynamically if not available
-      const pdfjsScript = document.createElement('script');
-      pdfjsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js';
-      document.head.appendChild(pdfjsScript);
-      
-      // Wait for script to load
-      await new Promise<void>((resolve) => {
-        pdfjsScript.onload = () => resolve();
-      });
-      
-      // Set worker source
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+      await loadPdfJs();
     }
     
     // Extract text from PDF
@@ -148,6 +138,21 @@ export async function translatePdf(
     toast.error(errorMessage);
     return { translatedText: "", error: errorMessage };
   }
+}
+
+// Helper function to load PDF.js dynamically
+async function loadPdfJs(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js';
+    script.onload = () => {
+      // Set worker source
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+      resolve();
+    };
+    script.onerror = () => reject(new Error('Failed to load PDF.js'));
+    document.head.appendChild(script);
+  });
 }
 
 export async function translateWebpage(
