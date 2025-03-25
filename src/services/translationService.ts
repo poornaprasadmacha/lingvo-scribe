@@ -1,6 +1,15 @@
 
 import { toast } from "sonner";
-import { PDFDocumentProxy } from "pdfjs-dist";
+
+// Define our own PDFDocumentProxy interface since we're using PDF.js via CDN
+interface PDFDocumentProxy {
+  numPages: number;
+  getPage: (pageNumber: number) => Promise<{
+    getTextContent: () => Promise<{
+      items: Array<{ str: string }>;
+    }>;
+  }>;
+}
 
 export interface TranslationResult {
   translatedText: string;
