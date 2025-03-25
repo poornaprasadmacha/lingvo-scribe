@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Translate } from "lucide-react";
+import { Languages } from "lucide-react";
 
 const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -34,7 +34,7 @@ const Navbar = () => {
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <Translate size={28} className="text-translator" />
+          <Languages size={28} className="text-translator" />
           <span className="text-2xl font-semibold text-gray-900 translator-text">Translo</span>
         </Link>
         

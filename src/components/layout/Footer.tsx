@@ -1,6 +1,6 @@
 
 import { Link } from "react-router-dom";
-import { Translate } from "lucide-react";
+import { Languages } from "lucide-react";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -11,7 +11,7 @@ const Footer = () => {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-6 md:mb-0">
             <Link to="/" className="flex items-center gap-2">
-              <Translate size={24} className="text-translator" />
+              <Languages size={24} className="text-translator" />
               <span className="text-xl font-semibold text-gray-900 translator-text">Translo</span>
             </Link>
             <p className="mt-2 text-sm text-gray-500 max-w-md">
