@@ -1,5 +1,6 @@
 
 import { toast } from "sonner";
+import { PDFDocumentProxy } from "pdfjs-dist";
 
 export interface TranslationResult {
   translatedText: string;
@@ -42,25 +43,98 @@ export async function translateText(
   }
 }
 
+async function translateTextInChunks(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string,
+  chunkSize: number = 500
+): Promise<string> {
+  // Split text into chunks
+  const chunks: string[] = [];
+  for (let i = 0; i < text.length; i += chunkSize) {
+    chunks.push(text.slice(i, i + chunkSize));
+  }
+  
+  toast.info(`Processing ${chunks.length} chunks of text...`);
+  
+  // Translate each chunk
+  let translatedText = '';
+  for (let i = 0; i < chunks.length; i++) {
+    const chunk = chunks[i];
+    toast.info(`Translating chunk ${i + 1}/${chunks.length}...`);
+    
+    const result = await translateText(chunk, sourceLanguage, targetLanguage);
+    if (result.error) {
+      toast.error(`Failed to translate chunk ${i + 1}`);
+    } else {
+      translatedText += result.translatedText + ' ';
+    }
+  }
+  
+  return translatedText.trim();
+}
+
 export async function translatePdf(
   file: File,
   sourceLanguage: string,
   targetLanguage: string
 ): Promise<TranslationResult> {
-  // In a real implementation, this would process the PDF and extract text
-  // For now, we'll simulate this process
   try {
     toast.info("Processing PDF file...");
-    // Simulate file processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
     
-    // This is a mock implementation
-    // In a real app, you would use a library like pdf.js to extract text
-    const mockExtractedText = "This is sample text extracted from the PDF document.";
+    // We need to use a CDN version of PDF.js since we don't have direct access to install it
+    if (!window.pdfjsLib) {
+      // Load PDF.js dynamically if not available
+      const pdfjsScript = document.createElement('script');
+      pdfjsScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js';
+      document.head.appendChild(pdfjsScript);
+      
+      // Wait for script to load
+      await new Promise<void>((resolve) => {
+        pdfjsScript.onload = () => resolve();
+      });
+      
+      // Set worker source
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+    }
     
-    // Translate the extracted text
-    return translateText(mockExtractedText, sourceLanguage, targetLanguage);
+    // Extract text from PDF
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let extractedText = '';
+    
+    toast.info(`PDF loaded successfully. Extracting text from ${pdf.numPages} pages...`);
+    
+    // Process each page
+    for (let i = 1; i <= pdf.numPages; i++) {
+      toast.info(`Extracting text from page ${i}/${pdf.numPages}...`);
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map((item: any) => item.str).join(' ');
+      extractedText += pageText + '\n';
+    }
+    
+    if (!extractedText.trim()) {
+      toast.error("No text could be extracted from the PDF");
+      return { translatedText: "", error: "No text could be extracted from the PDF" };
+    }
+    
+    toast.info("Text extracted successfully. Starting translation...");
+    
+    // Translate the extracted text in chunks
+    const translatedText = await translateTextInChunks(
+      extractedText,
+      sourceLanguage,
+      targetLanguage,
+      500 // Chunk size of 500 characters
+    );
+    
+    return {
+      translatedText,
+      detectedLanguage: sourceLanguage === "auto" ? "auto-detected" : undefined,
+    };
   } catch (error) {
+    console.error("PDF translation error:", error);
     const errorMessage = "Failed to process PDF file";
     toast.error(errorMessage);
     return { translatedText: "", error: errorMessage };
@@ -87,10 +161,27 @@ export async function translateWebpage(
     This would be the actual content of the page that would be translated.`;
     
     // Translate the extracted text
-    return translateText(mockExtractedText, sourceLanguage, targetLanguage);
+    const translatedText = await translateTextInChunks(
+      mockExtractedText, 
+      sourceLanguage, 
+      targetLanguage, 
+      500
+    );
+    
+    return { translatedText };
   } catch (error) {
     const errorMessage = "Failed to process webpage";
     toast.error(errorMessage);
     return { translatedText: "", error: errorMessage };
+  }
+}
+
+// Add this to make TypeScript happy with our PDF.js declaration
+declare global {
+  interface Window {
+    pdfjsLib: {
+      getDocument: (source: { data: ArrayBuffer }) => { promise: Promise<PDFDocumentProxy> };
+      GlobalWorkerOptions: { workerSrc: string };
+    };
   }
 }
