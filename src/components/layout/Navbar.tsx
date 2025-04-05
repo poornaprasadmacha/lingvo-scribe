@@ -21,6 +21,8 @@ const Navbar = () => {
     { name: "Text", path: "/" },
     { name: "PDF", path: "/pdf" },
     { name: "Webpage", path: "/webpage" },
+    { name: "Chat", path: "/chat" },
+    { name: "About Us", path: "/about" },
   ];
 
   return (
