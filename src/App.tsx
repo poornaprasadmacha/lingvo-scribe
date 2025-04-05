@@ -8,6 +8,7 @@ import { AnimatePresence } from "framer-motion";
 import TextTranslation from "./pages/TextTranslation";
 import PdfTranslation from "./pages/PdfTranslation";
 import WebpageTranslation from "./pages/WebpageTranslation";
+import ChatTranslation from "./pages/ChatTranslation";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/" element={<TextTranslation />} />
             <Route path="/pdf" element={<PdfTranslation />} />
             <Route path="/webpage" element={<WebpageTranslation />} />
+            <Route path="/chat" element={<ChatTranslation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

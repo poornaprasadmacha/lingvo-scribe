@@ -58,7 +58,7 @@ async function translateTextInChunks(
   targetLanguage: string,
   chunkSize: number = 500
 ): Promise<string> {
-  // Split text into chunks
+  // Split text into chunks of specified size (default 500)
   const chunks: string[] = [];
   for (let i = 0; i < text.length; i += chunkSize) {
     chunks.push(text.slice(i, i + chunkSize));
