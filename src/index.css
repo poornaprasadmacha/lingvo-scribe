@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -89,7 +90,7 @@
   }
 
   body {
-    @apply bg-gradient-to-br from-[#1A1A2E] via-[#16213E] to-[#0F3460] text-foreground font-sans;
+    @apply bg-gradient-to-r from-amber-50 via-gray-50 to-blue-50 text-foreground font-sans;
     min-height: 100vh;
     background-attachment: fixed;
   }
@@ -121,21 +122,21 @@
 
 @layer components {
   #root {
-    @apply bg-gradient-to-br from-[#1A1A2E]/80 via-[#16213E]/90 to-[#0F3460]/95 min-h-screen;
+    @apply bg-gradient-to-r from-amber-50/90 via-gray-50/95 to-blue-50/90 min-h-screen;
     background-attachment: fixed;
-    backdrop-filter: blur(10px);
+    backdrop-filter: blur(5px);
   }
 
   .glassmorphism {
-    @apply bg-white bg-opacity-20 backdrop-filter backdrop-blur-lg border border-white border-opacity-20 shadow-lg;
+    @apply bg-white/60 backdrop-filter backdrop-blur-md border border-gray-200 shadow-lg;
   }
   
   .translator-container {
-    @apply bg-[#16213E]/50 backdrop-blur-md;
+    @apply bg-white/30 backdrop-blur-sm;
   }
   
   .translator-card {
-    @apply bg-[#1A1A2E]/60 border border-blue-500/30 shadow-2xl shadow-blue-500/20;
+    @apply bg-white/80 border border-gray-200/50 shadow-lg hover:shadow-xl transition-shadow duration-300;
   }
   
   .translator-input {
