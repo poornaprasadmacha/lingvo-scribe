@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Layout from "@/components/layout/Layout";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
@@ -14,14 +14,16 @@ import { toast } from "sonner";
 import LanguageSelector from "@/components/shared/LanguageSelector";
 import { Download, Copy } from "lucide-react";
 
+// Pre-defined API key
+const GEMINI_API_KEY = "AIzaSyATwL9H4yWfM2hvjeNj-avvRbpZpxorywQ";
+
 const ChatTranslation = () => {
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [inputText, setInputText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
-  const [apiKey, setApiKey] = useState("");
-  const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+  const [apiKey, setApiKey] = useState(GEMINI_API_KEY);
   
   // Handle translation using the regular API
   const handleTranslate = async () => {
@@ -102,27 +104,12 @@ const ChatTranslation = () => {
 
             <TabsContent value="chatbot" className="space-y-4">
               <div className="bg-white rounded-lg shadow-lg p-4">
-                {!apiKey ? (
-                  <div className="text-center py-10">
-                    <h3 className="text-lg font-medium mb-2">Gemini API Key Required</h3>
-                    <p className="mb-4 text-gray-600">
-                      To use the chatbot translator, you need to provide a Google Gemini API key.
-                    </p>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setShowApiKeyDialog(true)}
-                    >
-                      Add API Key
-                    </Button>
-                  </div>
-                ) : (
-                  <ChatBot
-                    apiKey={apiKey}
-                    sourceLanguage={sourceLanguage}
-                    targetLanguage={targetLanguage}
-                    onTranslationReceived={handleTranslationFromChat}
-                  />
-                )}
+                <ChatBot
+                  apiKey={apiKey}
+                  sourceLanguage={sourceLanguage}
+                  targetLanguage={targetLanguage}
+                  onTranslationReceived={handleTranslationFromChat}
+                />
               </div>
               
               {translatedText && (
@@ -180,48 +167,6 @@ const ChatTranslation = () => {
             </TabsContent>
           </Tabs>
         </div>
-
-        {/* API Key Dialog */}
-        <Dialog open={showApiKeyDialog} onOpenChange={setShowApiKeyDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Enter Google Gemini API Key</DialogTitle>
-              <DialogDescription>
-                You'll need a Google Gemini API key to use the chatbot translator.
-                <a 
-                  href="https://aistudio.google.com/app/apikey" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="block text-primary hover:underline mt-1"
-                >
-                  Get an API key from Google AI Studio
-                </a>
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 mt-2">
-              <div>
-                <label className="text-sm font-medium mb-1 block">API Key</label>
-                <Input
-                  type="password"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="Enter your Gemini API key"
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Your API key is stored locally in your browser and is never sent to our servers.
-                </p>
-              </div>
-              <div className="flex justify-end">
-                <Button 
-                  onClick={() => setShowApiKeyDialog(false)}
-                  disabled={!apiKey.trim()}
-                >
-                  Save & Close
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
       </motion.div>
     </Layout>
   );

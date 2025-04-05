@@ -11,11 +11,14 @@ interface GeminiResponse {
   error?: string;
 }
 
+// Default API key
+const DEFAULT_API_KEY = "AIzaSyATwL9H4yWfM2hvjeNj-avvRbpZpxorywQ";
+
 export async function translateWithGemini(
   text: string,
   sourceLanguage: string,
   targetLanguage: string,
-  apiKey: string
+  apiKey: string = DEFAULT_API_KEY
 ): Promise<GeminiResponse> {
   if (!text.trim()) {
     return { error: "No text provided for translation" };
@@ -82,7 +85,7 @@ export async function translateWithGemini(
 // Handle chat conversation with context
 export async function chatWithGemini(
   messages: {role: string, content: string}[],
-  apiKey: string
+  apiKey: string = DEFAULT_API_KEY
 ): Promise<{response?: string, error?: string}> {
   if (!apiKey || apiKey.trim() === "") {
     return { error: "API key is required" };
