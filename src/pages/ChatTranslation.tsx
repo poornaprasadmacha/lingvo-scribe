@@ -82,7 +82,7 @@ const ChatTranslation = () => {
               <LanguageSelector 
                 value={sourceLanguage} 
                 onChange={setSourceLanguage}
-                includeAuto
+                detectLanguage={true}
               />
             </div>
             <div className="flex-1">
