@@ -1,6 +1,6 @@
-
 import { toast } from "sonner";
 import { PDFDocument, rgb } from 'pdf-lib';
+import { translateWithGemini } from "./geminiService";
 
 // Define our own PDFDocumentProxy interface since we're using PDF.js via CDN
 interface PDFDocumentProxy {
@@ -21,6 +21,8 @@ export interface TranslationResult {
 
 // Google Cloud Translation API key
 const GOOGLE_TRANSLATE_API_KEY = "AIzaSyD47tu3fq5HYETWP77cPs5D9S0Haix7Qjk";
+// Google Cloud Vision API key (using the same key)
+const GOOGLE_VISION_API_KEY = "AIzaSyD47tu3fq5HYETWP77cPs5D9S0Haix7Qjk";
 
 export async function translateText(
   text: string,
@@ -148,6 +150,138 @@ export async function translatePdf(
   try {
     toast.info("Processing PDF file...");
     
+    // Extract text from PDF using Vision API
+    const extractedText = await extractTextFromPdfWithVision(file);
+    
+    if (!extractedText.trim()) {
+      // Fallback to PDF.js if Vision API extraction fails
+      toast.info("Falling back to PDF.js for text extraction...");
+      return await translatePdfWithPdfJS(file, sourceLanguage, targetLanguage);
+    }
+    
+    toast.info("Text extracted successfully with Vision API. Starting translation...");
+    
+    // Translate the extracted text in chunks
+    const translatedText = await translateTextInChunks(
+      extractedText,
+      sourceLanguage,
+      targetLanguage,
+      500 // Chunk size of 500 characters
+    );
+    
+    // Create a new PDF with the translated text
+    toast.info("Creating translated PDF document...");
+    const translatedPdfDoc = await PDFDocument.create();
+    
+    // Split the translated text into pages (rough estimation)
+    const textLines = translatedText.split('\n');
+    let currentPage = translatedPdfDoc.addPage([612, 792]); // US Letter size
+    let yPosition = 750;
+    const fontSize = 11;
+    const lineHeight = 14;
+    
+    for (const line of textLines) {
+      if (yPosition < 50) {
+        currentPage = translatedPdfDoc.addPage([612, 792]);
+        yPosition = 750;
+      }
+      
+      currentPage.drawText(line, {
+        x: 50,
+        y: yPosition,
+        size: fontSize,
+        color: rgb(0, 0, 0),
+      });
+      
+      yPosition -= lineHeight;
+    }
+    
+    // Convert to PDF bytes and create URL
+    const pdfBytes = await translatedPdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const pdfUrl = URL.createObjectURL(blob);
+    
+    toast.success("Translation completed successfully!");
+    
+    return {
+      translatedText,
+      pdfUrl,
+      detectedLanguage: sourceLanguage === "auto" ? "auto-detected" : undefined,
+    };
+  } catch (error) {
+    console.error("PDF translation error:", error);
+    const errorMessage = "Failed to process PDF file";
+    toast.error(errorMessage);
+    return { translatedText: "", error: errorMessage };
+  }
+}
+
+// Extract text from PDF using Google Cloud Vision API
+async function extractTextFromPdfWithVision(file: File): Promise<string> {
+  try {
+    // Convert PDF to base64
+    const arrayBuffer = await file.arrayBuffer();
+    const base64Data = btoa(
+      new Uint8Array(arrayBuffer)
+        .reduce((data, byte) => data + String.fromCharCode(byte), '')
+    );
+    
+    // Prepare the Vision API request
+    const requestBody = {
+      requests: [{
+        inputConfig: {
+          mimeType: "application/pdf",
+          content: base64Data
+        },
+        features: [{
+          type: "DOCUMENT_TEXT_DETECTION"
+        }],
+      }]
+    };
+    
+    // Call the Vision API
+    const response = await fetch(
+      `https://vision.googleapis.com/v1/files:annotate?key=${GOOGLE_VISION_API_KEY}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody),
+      }
+    );
+    
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error("Vision API error:", data.error);
+      return "";
+    }
+    
+    // Extract text from the response
+    let fullText = '';
+    if (data.responses && data.responses.length > 0) {
+      for (const response of data.responses) {
+        if (response.fullTextAnnotation) {
+          fullText += response.fullTextAnnotation.text + '\n';
+        }
+      }
+    }
+    
+    return fullText;
+  } catch (error) {
+    console.error("Error extracting text with Vision API:", error);
+    return "";
+  }
+}
+
+// The original PDF.js based implementation as fallback
+async function translatePdfWithPdfJS(
+  file: File,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<TranslationResult> {
+  try {
     // Extract text from PDF
     const arrayBuffer = await file.arrayBuffer();
     const pdfDoc = await PDFDocument.load(arrayBuffer);
