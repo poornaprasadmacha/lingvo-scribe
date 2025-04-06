@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 
 interface GeminiMessage {
@@ -193,67 +192,6 @@ export async function chatWithGemini(
     }
   } catch (error) {
     const errorMessage = "An error occurred while communicating with Gemini";
-    toast.error(errorMessage);
-    return { error: errorMessage };
-  }
-}
-
-// New function to translate PDF content specifically optimized for PDF structure
-export async function translatePdfWithGemini(
-  text: string,
-  sourceLanguage: string,
-  targetLanguage: string,
-  apiKey: string = DEFAULT_API_KEY
-): Promise<GeminiResponse> {
-  if (!text.trim()) {
-    return { error: "No text provided for translation" };
-  }
-
-  try {
-    // Create a more specific prompt for PDF translation
-    const prompt = `Translate the following text extracted from a PDF document from ${sourceLanguage === "auto" ? "the detected language" : sourceLanguage} to ${targetLanguage}. 
-    Please preserve the paragraph structure, line breaks, and formatting as much as possible.
-    Only provide the translation, no additional comments or explanations:
-
-    ${text}`;
-    
-    // Try using Gemini 2.0 Flash first (better for longer content)
-    const flashResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        contents: [{
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          temperature: 0.1,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 8192
-        }
-      })
-    });
-    
-    const data = await flashResponse.json();
-    
-    if (data.error) {
-      const errorMessage = data.error.message || "Translation failed";
-      toast.error(errorMessage);
-      return { error: errorMessage };
-    }
-
-    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-      const translatedText = data.candidates[0].content.parts[0].text;
-      return { translatedText };
-    } else {
-      const errorMessage = "Unexpected response format from Gemini API";
-      toast.error(errorMessage);
-      return { error: errorMessage };
-    }
-  } catch (error) {
-    const errorMessage = "An error occurred during PDF translation with Gemini";
     toast.error(errorMessage);
     return { error: errorMessage };
   }
