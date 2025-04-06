@@ -28,8 +28,19 @@ export async function translateWithGemini(
   }
 
   try {
-    // Prepare the prompt
-    const prompt = `Translate the following text from ${sourceLanguage === "auto" ? "the detected language" : sourceLanguage} to ${targetLanguage}. Only provide the translation, no additional comments:\n\n${text}`;
+    // Create a more specific prompt for webpage translation
+    let prompt = "";
+    
+    if (text.includes("##")) {
+      // This is likely a webpage with headings
+      prompt = `Translate the following webpage content from ${sourceLanguage === "auto" ? "the detected language" : sourceLanguage} to ${targetLanguage}. 
+      Preserve the structure with headings (marked by ##) and paragraphs. 
+      Only provide the translation, no additional comments:\n\n${text}`;
+    } else {
+      // Regular text translation
+      prompt = `Translate the following text from ${sourceLanguage === "auto" ? "the detected language" : sourceLanguage} to ${targetLanguage}. 
+      Only provide the translation, no additional comments:\n\n${text}`;
+    }
     
     // Try using Gemini 2.0 Flash first
     try {
@@ -41,7 +52,11 @@ export async function translateWithGemini(
         body: JSON.stringify({
           contents: [{
             parts: [{ text: prompt }]
-          }]
+          }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 4096
+          }
         })
       });
       
@@ -78,7 +93,7 @@ export async function translateWithGemini(
           temperature: 0.2,
           topK: 40,
           topP: 0.95,
-          maxOutputTokens: 1024
+          maxOutputTokens: 4096
         }
       })
     });

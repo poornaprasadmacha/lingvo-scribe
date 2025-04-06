@@ -220,28 +220,80 @@ export async function translateWebpage(
 
   try {
     toast.info("Processing webpage...");
-    // Simulate web page processing delay
-    await new Promise((resolve) => setTimeout(resolve, 2000));
     
-    // This is a mock implementation
-    // In a real app, you would use a proxy or API to fetch the webpage content
-    const mockExtractedText = `This is sample text extracted from the webpage at ${url}.
-    This would be the actual content of the page that would be translated.`;
+    // Fetch content from the webpage
+    const fetchResponse = await fetch(`https://cors-anywhere.herokuapp.com/${url}`, {
+      headers: {
+        "Origin": window.location.origin,
+      },
+    }).catch(() => {
+      // If CORS proxy fails, provide explanation to user
+      throw new Error("Could not access the webpage due to CORS restrictions");
+    });
+
+    if (!fetchResponse || !fetchResponse.ok) {
+      throw new Error("Failed to fetch webpage content");
+    }
     
-    // Translate the extracted text
-    const translatedText = await translateTextInChunks(
-      mockExtractedText, 
+    const htmlContent = await fetchResponse.text();
+    
+    // Extract text content from HTML
+    const textContent = extractTextFromHtml(htmlContent);
+    
+    if (!textContent.trim()) {
+      throw new Error("No text content could be extracted from the webpage");
+    }
+    
+    // Use Gemini API for better translation quality
+    const { translatedText, error } = await translateWithGemini(
+      textContent, 
       sourceLanguage, 
-      targetLanguage, 
-      500
+      targetLanguage
     );
     
-    return { translatedText };
-  } catch (error) {
-    const errorMessage = "Failed to process webpage";
+    if (error) {
+      throw new Error(error);
+    }
+    
+    return { translatedText: translatedText || "" };
+  } catch (error: any) {
+    const errorMessage = error?.message || "Failed to process webpage";
     toast.error(errorMessage);
     return { translatedText: "", error: errorMessage };
   }
+}
+
+// Helper function to extract text from HTML
+function extractTextFromHtml(html: string): string {
+  // Create a DOM parser
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, "text/html");
+  
+  // Remove script and style elements
+  const scripts = doc.querySelectorAll("script, style, noscript, iframe");
+  scripts.forEach(script => script.remove());
+  
+  // Get main content areas
+  const mainContent = doc.querySelector("main, #content, .content, article, .article, .main");
+  
+  // If we found a main content area, use that, otherwise use body
+  const contentElement = mainContent || doc.body;
+  
+  // Extract text, preserving some structure
+  let text = "";
+  
+  // Get all headings and paragraphs
+  const elements = contentElement.querySelectorAll("h1, h2, h3, h4, h5, h6, p, li");
+  elements.forEach(el => {
+    // Add heading markers to maintain some structure
+    if (el.tagName.toLowerCase().startsWith('h')) {
+      text += `\n## ${el.textContent.trim()} ##\n\n`;
+    } else {
+      text += `${el.textContent.trim()}\n\n`;
+    }
+  });
+  
+  return text.trim();
 }
 
 // New function to translate using Gemini 2.0 Flash

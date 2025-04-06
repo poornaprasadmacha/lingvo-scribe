@@ -1,18 +1,21 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Globe, Link as LinkIcon, Copy, ExternalLink } from "lucide-react";
+import { Globe, Link as LinkIcon, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Layout from "@/components/layout/Layout";
 import LanguageSelector from "@/components/shared/LanguageSelector";
 import { translateWebpage } from "@/services/translationService";
+import { translateWithGemini } from "@/services/geminiService";
 
 const WebpageTranslation = () => {
   const [url, setUrl] = useState("");
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [translatedText, setTranslatedText] = useState("");
+  const [originalText, setOriginalText] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
+  const [activeTab, setActiveTab] = useState<"translated" | "original">("translated");
 
   const handleTranslate = async () => {
     if (!url.trim()) {
@@ -40,7 +43,17 @@ const WebpageTranslation = () => {
     }
 
     setIsTranslating(true);
+    setTranslatedText("");
+    setOriginalText("");
+    
     try {
+      // First try to get the original text
+      const originalResult = await translateWebpage(processedUrl, sourceLanguage, sourceLanguage);
+      if (originalResult.translatedText) {
+        setOriginalText(originalResult.translatedText);
+      }
+      
+      // Then translate to target language
       const result = await translateWebpage(processedUrl, sourceLanguage, targetLanguage);
       
       if (result.translatedText) {
@@ -96,25 +109,21 @@ const WebpageTranslation = () => {
           variants={containerVariants}
           initial="hidden"
           animate="visible"
-          className="max-w-4xl mx-auto"
+          className="max-w-5xl mx-auto px-4"
         >
-          <motion.h1 
-            variants={itemVariants}
-            className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-6 translator-text"
-          >
-            Webpage Translation
-          </motion.h1>
-          
-          <motion.p 
-            variants={itemVariants}
-            className="text-center text-gray-600 mb-10 max-w-2xl mx-auto"
-          >
-            Translate entire web pages while preserving the structure and formatting.
-          </motion.p>
+          <motion.div variants={itemVariants} className="text-center mb-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 translator-text bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Webpage Translation
+            </h1>
+            
+            <p className="text-center text-gray-600 max-w-2xl mx-auto">
+              Translate entire web pages while preserving their structure and formatting.
+            </p>
+          </motion.div>
 
           <motion.div 
             variants={itemVariants}
-            className="mb-8 translator-card"
+            className="mb-8 translator-card p-6 rounded-xl shadow-lg"
           >
             <div className="flex flex-col md:flex-row gap-6 mb-6">
               <div className="flex-1">
@@ -170,35 +179,103 @@ const WebpageTranslation = () => {
                   isTranslating || !url.trim() ? "opacity-70 cursor-not-allowed" : ""
                 }`}
               >
-                <LinkIcon size={18} className="mr-2" />
-                {isTranslating ? "Translating Webpage..." : "Translate Webpage"}
+                {isTranslating ? (
+                  <>
+                    <Loader2 size={18} className="mr-2 animate-spin" />
+                    Translating Webpage...
+                  </>
+                ) : (
+                  <>
+                    <LinkIcon size={18} className="mr-2" />
+                    Translate Webpage
+                  </>
+                )}
               </button>
             </div>
 
-            {translatedText && (
+            {(translatedText || isTranslating) && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 transition={{ duration: 0.5 }}
-                className="mt-8"
+                className="mt-10"
               >
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-lg font-medium text-gray-900">Translation Result</h3>
-                  <button
-                    onClick={() => copyToClipboard(translatedText)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
-                  >
-                    <Copy size={16} />
-                    <span>Copy</span>
-                  </button>
+                  {translatedText && (
+                    <button
+                      onClick={() => copyToClipboard(translatedText)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                    >
+                      <Copy size={16} />
+                      <span>Copy</span>
+                    </button>
+                  )}
                 </div>
-                
-                <div className="bg-gray-50 rounded-lg p-6 max-h-96 overflow-y-auto border border-gray-200">
-                  {translatedText}
-                </div>
+
+                {isTranslating ? (
+                  <div className="flex flex-col items-center justify-center py-16 bg-gray-50 rounded-lg border border-gray-200">
+                    <Loader2 size={32} className="animate-spin text-translator mb-4" />
+                    <p className="text-gray-600">Translating webpage content...</p>
+                  </div>
+                ) : (
+                  <>
+                    {(translatedText || originalText) && (
+                      <div className="mb-4 border-b">
+                        <div className="flex">
+                          <button 
+                            onClick={() => setActiveTab("translated")}
+                            className={`px-4 py-2 border-b-2 ${
+                              activeTab === "translated" 
+                                ? "border-translator text-translator" 
+                                : "border-transparent text-gray-500"
+                            }`}
+                          >
+                            Translated
+                          </button>
+                          {originalText && (
+                            <button 
+                              onClick={() => setActiveTab("original")}
+                              className={`px-4 py-2 border-b-2 ${
+                                activeTab === "original" 
+                                  ? "border-translator text-translator" 
+                                  : "border-transparent text-gray-500"
+                              }`}
+                            >
+                              Original
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <div className="bg-gray-50 rounded-lg p-6 max-h-96 overflow-y-auto border border-gray-200">
+                      <div className="prose max-w-none">
+                        {activeTab === "translated" ? 
+                          translatedText.split('\n').map((line, i) => (
+                            <div key={i} className="mb-2">
+                              {line.startsWith('##') ? 
+                                <h3 className="font-bold text-lg">{line.replace(/##/g, '')}</h3> : 
+                                <p>{line}</p>
+                              }
+                            </div>
+                          )) :
+                          originalText.split('\n').map((line, i) => (
+                            <div key={i} className="mb-2">
+                              {line.startsWith('##') ? 
+                                <h3 className="font-bold text-lg">{line.replace(/##/g, '')}</h3> : 
+                                <p>{line}</p>
+                              }
+                            </div>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  </>
+                )}
                 
                 <p className="mt-4 text-gray-500 text-sm">
-                  Note: This is a text-only translation. For a full webpage translation experience with preserved formatting, consider using our premium service.
+                  Note: This translation preserves the text content but may not maintain all original formatting.
                 </p>
               </motion.div>
             )}
