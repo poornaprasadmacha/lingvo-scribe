@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 
 interface GeminiMessage {
@@ -32,6 +31,33 @@ export async function translateWithGemini(
     // Prepare the prompt
     const prompt = `Translate the following text from ${sourceLanguage === "auto" ? "the detected language" : sourceLanguage} to ${targetLanguage}. Only provide the translation, no additional comments:\n\n${text}`;
     
+    // Try using Gemini 2.0 Flash first
+    try {
+      const flashResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: prompt }]
+          }]
+        })
+      });
+      
+      const data = await flashResponse.json();
+      
+      if (!data.error && data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+        return { translatedText: data.candidates[0].content.parts[0].text };
+      }
+      
+      // If there's an error, fall back to gemini-pro
+      console.log("Falling back to gemini-pro due to error with gemini-2.0-flash");
+    } catch (flashError) {
+      console.error("Error with gemini-2.0-flash:", flashError);
+    }
+    
+    // Fallback to gemini-pro
     // Prepare the messages
     const messages: GeminiMessage[] = [
       {
@@ -98,7 +124,38 @@ export async function chatWithGemini(
       parts: [{ text: m.content }]
     }));
 
-    // Call Gemini API
+    // Try Gemini 2.0 Flash first
+    try {
+      const flashResponse = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          contents: geminiMessages,
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024
+          }
+        })
+      });
+      
+      const flashData = await flashResponse.json();
+      
+      // If Flash model works, return its response
+      if (!flashData.error && flashData.candidates && flashData.candidates[0]?.content?.parts?.[0]?.text) {
+        return { response: flashData.candidates[0].content.parts[0].text };
+      }
+      
+      // Otherwise fall back to gemini-pro
+      console.log("Falling back to gemini-pro due to error with gemini-2.0-flash");
+    } catch (flashError) {
+      console.error("Error with gemini-2.0-flash:", flashError);
+    }
+
+    // Call Gemini Pro API as fallback
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: {

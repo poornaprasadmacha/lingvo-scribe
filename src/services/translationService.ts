@@ -1,4 +1,3 @@
-
 import { toast } from "sonner";
 
 // Define our own PDFDocumentProxy interface since we're using PDF.js via CDN
@@ -17,6 +16,9 @@ export interface TranslationResult {
   error?: string;
 }
 
+// Google Cloud Translation API key
+const GOOGLE_TRANSLATE_API_KEY = "AIzaSyD47tu3fq5HYETWP77cPs5D9S0Haix7Qjk";
+
 export async function translateText(
   text: string,
   sourceLanguage: string,
@@ -27,26 +29,78 @@ export async function translateText(
   }
 
   try {
-    // Use MyMemory Translation API
-    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
-      text
-    )}&langpair=${sourceLanguage === "auto" ? "" : sourceLanguage}|${targetLanguage}`;
-
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (data.responseData) {
-      return {
-        translatedText: data.responseData.translatedText,
-        detectedLanguage: data.responseData.detectedLanguage || undefined,
-      };
-    } else {
-      const errorMessage = data.responseDetails || "Translation failed";
-      toast.error(errorMessage);
-      return { translatedText: "", error: errorMessage };
-    }
+    // First try Google Cloud Translation API
+    return await translateWithGoogleAPI(text, sourceLanguage, targetLanguage);
   } catch (error) {
-    const errorMessage = "An error occurred during translation";
+    console.error("Google Translation API error:", error);
+    toast.error("Failed with Google Translation API, falling back to MyMemory");
+    
+    // Fallback to MyMemory
+    return await translateWithMyMemory(text, sourceLanguage, targetLanguage);
+  }
+}
+
+// Google Cloud Translation API
+async function translateWithGoogleAPI(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<TranslationResult> {
+  const url = `https://translation.googleapis.com/language/translate/v2?key=${GOOGLE_TRANSLATE_API_KEY}`;
+  
+  const body = {
+    q: text,
+    target: targetLanguage,
+    format: "text"
+  };
+  
+  // Add source language if specified (not auto)
+  if (sourceLanguage !== "auto") {
+    body["source"] = sourceLanguage;
+  }
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  
+  const data = await response.json();
+  
+  if (data.error) {
+    throw new Error(data.error.message || "Google Translation API error");
+  }
+  
+  if (data.data && data.data.translations && data.data.translations.length > 0) {
+    return {
+      translatedText: data.data.translations[0].translatedText,
+      detectedLanguage: data.data.translations[0].detectedSourceLanguage || sourceLanguage,
+    };
+  } else {
+    throw new Error("Unexpected response from Google Translation API");
+  }
+}
+
+// MyMemory Translation API as fallback
+async function translateWithMyMemory(
+  text: string,
+  sourceLanguage: string,
+  targetLanguage: string
+): Promise<TranslationResult> {
+  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(
+    text
+  )}&langpair=${sourceLanguage === "auto" ? "" : sourceLanguage}|${targetLanguage}`;
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (data.responseData) {
+    return {
+      translatedText: data.responseData.translatedText,
+      detectedLanguage: data.responseData.detectedLanguage || undefined,
+    };
+  } else {
+    const errorMessage = data.responseDetails || "Translation failed";
     toast.error(errorMessage);
     return { translatedText: "", error: errorMessage };
   }
@@ -185,6 +239,60 @@ export async function translateWebpage(
     return { translatedText };
   } catch (error) {
     const errorMessage = "Failed to process webpage";
+    toast.error(errorMessage);
+    return { translatedText: "", error: errorMessage };
+  }
+}
+
+// New function to translate using Gemini 2.0 Flash
+export async function translateWithGemini2Flash(
+  text: string,
+  targetLanguage: string
+): Promise<TranslationResult> {
+  if (!text.trim()) {
+    return { translatedText: "", error: "No text provided for translation" };
+  }
+
+  const GEMINI_API_KEY = "AIzaSyATwL9H4yWfM2hvjeNj-avvRbpZpxorywQ";
+
+  try {
+    const prompt = `Translate the following text to ${targetLanguage}. Only provide the translation, no additional comments:\n\n${text}`;
+    
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt }
+            ]
+          }]
+        }),
+      }
+    );
+
+    const data = await response.json();
+    
+    if (data.error) {
+      const errorMessage = data.error.message || "Translation failed with Gemini";
+      toast.error(errorMessage);
+      return { translatedText: "", error: errorMessage };
+    }
+
+    if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+      const translatedText = data.candidates[0].content.parts[0].text;
+      return { translatedText };
+    } else {
+      const errorMessage = "Unexpected response format from Gemini API";
+      toast.error(errorMessage);
+      return { translatedText: "", error: errorMessage };
+    }
+  } catch (error) {
+    const errorMessage = "An error occurred during translation with Gemini";
     toast.error(errorMessage);
     return { translatedText: "", error: errorMessage };
   }
