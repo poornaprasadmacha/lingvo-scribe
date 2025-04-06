@@ -1,4 +1,6 @@
+
 import { toast } from "sonner";
+import { PDFDocument, rgb } from 'pdf-lib';
 
 // Define our own PDFDocumentProxy interface since we're using PDF.js via CDN
 interface PDFDocumentProxy {
@@ -12,6 +14,7 @@ interface PDFDocumentProxy {
 
 export interface TranslationResult {
   translatedText: string;
+  pdfUrl?: string;
   detectedLanguage?: string;
   error?: string;
 }
@@ -145,26 +148,31 @@ export async function translatePdf(
   try {
     toast.info("Processing PDF file...");
     
-    // Ensure PDF.js is loaded
+    // Extract text from PDF
+    const arrayBuffer = await file.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(arrayBuffer);
+    
+    let extractedText = '';
+    const pageCount = pdfDoc.getPageCount();
+    
+    toast.info(`PDF loaded successfully. Extracting text from ${pageCount} pages...`);
+    
+    // We'll use PDF.js for better text extraction
+    // Load PDF.js if needed
     if (typeof window.pdfjsLib === 'undefined') {
-      // Load PDF.js dynamically if not available
       await loadPdfJs();
     }
     
-    // Extract text from PDF
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let extractedText = '';
-    
-    toast.info(`PDF loaded successfully. Extracting text from ${pdf.numPages} pages...`);
+    // Use PDF.js for text extraction (better than pdf-lib for extracting text)
+    const pdfJsDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     
     // Process each page
-    for (let i = 1; i <= pdf.numPages; i++) {
-      toast.info(`Extracting text from page ${i}/${pdf.numPages}...`);
-      const page = await pdf.getPage(i);
+    for (let i = 1; i <= pdfJsDoc.numPages; i++) {
+      toast.info(`Extracting text from page ${i}/${pdfJsDoc.numPages}...`);
+      const page = await pdfJsDoc.getPage(i);
       const textContent = await page.getTextContent();
       const pageText = textContent.items.map((item: any) => item.str).join(' ');
-      extractedText += pageText + '\n';
+      extractedText += pageText + '\n\n';
     }
     
     if (!extractedText.trim()) {
@@ -182,8 +190,43 @@ export async function translatePdf(
       500 // Chunk size of 500 characters
     );
     
+    // Create a new PDF with the translated text
+    toast.info("Creating translated PDF document...");
+    const translatedPdfDoc = await PDFDocument.create();
+    
+    // Split the translated text into pages (rough estimation)
+    const textLines = translatedText.split('\n');
+    let currentPage = translatedPdfDoc.addPage([612, 792]); // US Letter size
+    let yPosition = 750;
+    const fontSize = 11;
+    const lineHeight = 14;
+    
+    for (const line of textLines) {
+      if (yPosition < 50) {
+        currentPage = translatedPdfDoc.addPage([612, 792]);
+        yPosition = 750;
+      }
+      
+      currentPage.drawText(line, {
+        x: 50,
+        y: yPosition,
+        size: fontSize,
+        color: rgb(0, 0, 0),
+      });
+      
+      yPosition -= lineHeight;
+    }
+    
+    // Convert to PDF bytes and create URL
+    const pdfBytes = await translatedPdfDoc.save();
+    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    const pdfUrl = URL.createObjectURL(blob);
+    
+    toast.success("Translation completed successfully!");
+    
     return {
       translatedText,
+      pdfUrl,
       detectedLanguage: sourceLanguage === "auto" ? "auto-detected" : undefined,
     };
   } catch (error) {

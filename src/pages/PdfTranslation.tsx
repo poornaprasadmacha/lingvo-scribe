@@ -1,11 +1,13 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { FileText, Upload, Download, Trash2 } from "lucide-react";
+import { FileText, Upload, Download, Trash2, FileUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { useDropzone } from "react-dropzone";
 import Layout from "@/components/layout/Layout";
 import LanguageSelector from "@/components/shared/LanguageSelector";
 import { translatePdf } from "@/services/translationService";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 const PdfTranslation = () => {
@@ -13,30 +15,32 @@ const PdfTranslation = () => {
   const [sourceLanguage, setSourceLanguage] = useState("en");
   const [targetLanguage, setTargetLanguage] = useState("ta");
   const [translatedText, setTranslatedText] = useState("");
+  const [translatedPdfUrl, setTranslatedPdfUrl] = useState("");
   const [isTranslating, setIsTranslating] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    
-    if (!selectedFile) return;
-    
-    // Check file type
-    const fileType = selectedFile.type;
-    if (fileType !== "application/pdf") {
-      toast.error("Please upload a PDF file");
-      return;
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: {
+      'application/pdf': ['.pdf']
+    },
+    maxFiles: 1,
+    maxSize: 10 * 1024 * 1024, // 10MB limit
+    onDropAccepted: (acceptedFiles) => {
+      setFile(acceptedFiles[0]);
+      setTranslatedText("");
+      setTranslatedPdfUrl("");
+      toast.success(`File added: ${acceptedFiles[0].name}`);
+    },
+    onDropRejected: (fileRejections) => {
+      const error = fileRejections[0]?.errors[0];
+      if (error?.code === 'file-too-large') {
+        toast.error("File size exceeds 10MB limit");
+      } else if (error?.code === 'file-invalid-type') {
+        toast.error("Please upload a PDF file");
+      } else {
+        toast.error("Error uploading file");
+      }
     }
-    
-    // Check file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (selectedFile.size > maxSize) {
-      toast.error("File size exceeds 10MB limit");
-      return;
-    }
-    
-    setFile(selectedFile);
-    setTranslatedText("");
-  };
+  });
 
   const handleTranslate = async () => {
     if (!file) {
@@ -55,6 +59,9 @@ const PdfTranslation = () => {
       
       if (result.translatedText) {
         setTranslatedText(result.translatedText);
+        if (result.pdfUrl) {
+          setTranslatedPdfUrl(result.pdfUrl);
+        }
         toast.success("PDF translation completed");
       } else if (result.error) {
         toast.error(result.error);
@@ -66,30 +73,10 @@ const PdfTranslation = () => {
     }
   };
 
-  const downloadPdf = () => {
-    if (!translatedText) {
-      toast.error("No translated content to download");
-      return;
-    }
-    
-    // In a real app, you would generate a proper PDF file
-    // This is a simplified example using text file
-    const blob = new Blob([translatedText], { type: "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `translated_${file?.name.replace(".pdf", "")}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success("Downloaded translation");
-  };
-
   const clearFile = () => {
     setFile(null);
     setTranslatedText("");
+    setTranslatedPdfUrl("");
   };
 
   const containerVariants = {
@@ -160,21 +147,25 @@ const PdfTranslation = () => {
                 </div>
 
                 <div className="my-8">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center bg-gray-50/50">
+                  <div 
+                    {...getRootProps()} 
+                    className={`border-2 border-dashed ${isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300 bg-gray-50/50'} rounded-lg p-8 text-center transition-colors duration-200 cursor-pointer`}
+                  >
+                    <input {...getInputProps()} />
                     {!file ? (
                       <div className="flex flex-col items-center">
-                        <FileText size={48} className="text-blue-500 mb-4" />
-                        <p className="text-gray-600 mb-4">Drag and drop your PDF file here, or click to browse</p>
-                        <label className="translator-button flex items-center gap-2 cursor-pointer">
+                        <FileUp size={48} className="text-blue-500 mb-4" />
+                        <p className="text-gray-600 mb-4">
+                          {isDragActive
+                            ? "Drop the PDF file here"
+                            : "Drag and drop your PDF file here, or click to browse"
+                          }
+                        </p>
+                        <Button className="translator-button flex items-center gap-2">
                           <Upload size={18} />
                           <span>Select PDF File</span>
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            onChange={handleFileChange}
-                            className="hidden"
-                          />
-                        </label>
+                        </Button>
+                        <p className="mt-3 text-xs text-gray-500">Maximum file size: 10MB</p>
                       </div>
                     ) : (
                       <div className="flex flex-col items-center">
@@ -184,29 +175,43 @@ const PdfTranslation = () => {
                           {(file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                         <div className="flex gap-3">
-                          <button
-                            onClick={clearFile}
-                            className="flex items-center gap-1 px-3 py-2 bg-red-50 text-red-600 rounded-md hover:bg-red-100 transition-colors"
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              clearFile();
+                            }}
+                            variant="destructive"
+                            className="flex items-center gap-1"
                           >
                             <Trash2 size={16} />
                             <span>Remove</span>
-                          </button>
-                          <button
-                            onClick={handleTranslate}
+                          </Button>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleTranslate();
+                            }}
                             disabled={isTranslating}
-                            className={`translator-button flex items-center gap-1 ${
-                              isTranslating ? "opacity-70 cursor-not-allowed" : ""
-                            }`}
+                            className="translator-button flex items-center gap-2"
                           >
-                            {isTranslating ? "Translating..." : "Translate PDF"}
-                          </button>
+                            {isTranslating ? (
+                              <>
+                                <Loader2 size={18} className="animate-spin" />
+                                <span>Translating...</span>
+                              </>
+                            ) : (
+                              <>
+                                <span>Translate PDF</span>
+                              </>
+                            )}
+                          </Button>
                         </div>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {translatedText && (
+                {(translatedText || translatedPdfUrl) && (
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
@@ -215,17 +220,26 @@ const PdfTranslation = () => {
                   >
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="text-lg font-medium text-gray-800">Translation Result</h3>
-                      <button
-                        onClick={downloadPdf}
-                        className="flex items-center gap-2 px-4 py-2 bg-translator text-white rounded-md hover:bg-translator-dark transition-colors"
-                      >
-                        <Download size={16} />
-                        <span>Download Translation</span>
-                      </button>
+                      {translatedPdfUrl && (
+                        <a
+                          href={translatedPdfUrl}
+                          download={`translated_${file?.name || 'document.pdf'}`}
+                          className="flex items-center gap-2 px-4 py-2 bg-translator text-white rounded-md hover:bg-translator-dark transition-colors"
+                        >
+                          <Download size={16} />
+                          <span>Download Translated PDF</span>
+                        </a>
+                      )}
                     </div>
                     
                     <div className="bg-gray-50/80 rounded-lg p-6 max-h-96 overflow-y-auto border border-gray-200">
-                      {translatedText}
+                      {translatedText ? (
+                        translatedText.split('\n').map((line, i) => (
+                          <p key={i} className={i > 0 ? 'mt-2' : ''}>{line || ' '}</p>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 italic">Translation text preview not available</p>
+                      )}
                     </div>
                   </motion.div>
                 )}
