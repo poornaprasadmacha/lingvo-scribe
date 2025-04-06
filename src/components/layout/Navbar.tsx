@@ -35,15 +35,15 @@ const Navbar = () => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className={`fixed top-0 left-0 right-0 z-50 py-4 px-6 transition-all duration-300 ${
-        scrolled ? "bg-white/80 backdrop-blur-md shadow-md" : "bg-transparent"
+      className={`fixed top-0 left-0 right-0 z-50 py-5 px-8 transition-all duration-300 ${
+        scrolled ? "bg-white/90 backdrop-blur-md shadow-lg" : "bg-transparent"
       }`}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 z-50">
+        <Link to="/" className="flex items-center gap-3 z-50">
           <div className="relative">
-            <Languages size={28} className="text-blue-600" />
-            <span className="absolute -top-1 -right-1 h-2 w-2 bg-indigo-500 rounded-full animate-pulse"></span>
+            <Languages size={30} className="text-blue-600" />
+            <span className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-indigo-500 rounded-full animate-pulse"></span>
           </div>
           <span className="text-2xl font-semibold text-gray-900 translator-text">
             <span className="text-blue-600">Trans</span>
@@ -56,7 +56,7 @@ const Navbar = () => {
             <Link
               key={link.path}
               to={link.path}
-              className={`relative px-1 py-2 font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200 ${
+              className={`relative px-2 py-2 font-medium text-gray-700 hover:text-blue-600 transition-colors duration-200 ${
                 location.pathname === link.path ? "text-blue-600" : ""
               }`}
             >
@@ -77,7 +77,7 @@ const Navbar = () => {
         <div className="block md:hidden z-50">
           <button 
             onClick={toggleMobileMenu} 
-            className="text-gray-700 hover:text-blue-600 transition-colors"
+            className="text-gray-700 hover:text-blue-600 transition-colors p-2 rounded-lg"
           >
             {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -89,17 +89,17 @@ const Navbar = () => {
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="fixed inset-0 z-40 bg-white flex flex-col items-center justify-center gap-8"
+            className="fixed inset-0 z-40 bg-white flex flex-col items-center justify-center gap-8 pt-20"
           >
             {links.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
                 onClick={() => setMobileMenuOpen(false)}
-                className={`text-xl font-medium ${
+                className={`text-xl font-medium py-3 px-8 rounded-lg transition-colors ${
                   location.pathname === link.path 
-                    ? "text-blue-600" 
-                    : "text-gray-700"
+                    ? "text-blue-600 bg-blue-50" 
+                    : "text-gray-700 hover:bg-gray-50"
                 }`}
               >
                 {link.name}

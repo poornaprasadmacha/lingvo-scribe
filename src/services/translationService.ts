@@ -1,3 +1,4 @@
+
 import { toast } from "sonner";
 
 // Define our own PDFDocumentProxy interface since we're using PDF.js via CDN
@@ -244,10 +245,9 @@ export async function translateWebpage(
       throw new Error("No text content could be extracted from the webpage");
     }
     
-    // Use Gemini API for better translation quality
-    const { translatedText, error } = await translateWithGemini(
+    // Use the translateWithGemini2Flash function instead of translateWithGemini
+    const { translatedText, error } = await translateWithGemini2Flash(
       textContent, 
-      sourceLanguage, 
       targetLanguage
     );
     

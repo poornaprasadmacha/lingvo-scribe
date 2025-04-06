@@ -99,7 +99,7 @@ const TextTranslation = () => {
 
   return (
     <Layout>
-      <div className="translator-container pt-32 pb-20">
+      <div className="translator-container pt-32 pb-20 px-6">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -108,23 +108,23 @@ const TextTranslation = () => {
         >
           <motion.h1 
             variants={itemVariants}
-            className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-6 translator-text"
+            className="text-4xl md:text-5xl font-bold text-gray-900 text-center mb-8 translator-text"
           >
             Text Translation
           </motion.h1>
           
           <motion.p 
             variants={itemVariants}
-            className="text-center text-gray-600 mb-10 max-w-2xl mx-auto"
+            className="text-center text-gray-600 mb-12 max-w-2xl mx-auto"
           >
             Translate text between multiple languages with high accuracy and natural-sounding results.
           </motion.p>
 
           <motion.div 
             variants={itemVariants}
-            className="mb-8 translator-card"
+            className="mb-12 translator-card p-8 rounded-xl shadow-lg"
           >
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex flex-col md:flex-row gap-6 mb-8">
               <div className="flex-1">
                 <LanguageSelector 
                   value={sourceLanguage} 
@@ -136,7 +136,7 @@ const TextTranslation = () => {
               
               <div className="flex items-center justify-center my-2">
                 <button 
-                  className="p-2 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
+                  className="p-3 bg-gray-100 rounded-full hover:bg-gray-200 transition-colors"
                   onClick={swapLanguages}
                 >
                   <ArrowDown size={20} className="text-gray-600 md:hidden" />
@@ -154,11 +154,11 @@ const TextTranslation = () => {
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="grid md:grid-cols-2 gap-8">
               <div className="relative">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700">Source Text</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       className="p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
                       onClick={() => speakText(inputText, sourceLanguage)}
@@ -186,7 +186,7 @@ const TextTranslation = () => {
                   value={inputText}
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder="Type or paste text to translate..."
-                  className="w-full h-48 p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-translator focus:border-transparent transition-all resize-none"
+                  className="w-full h-48 p-5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-translator focus:border-transparent transition-all resize-none"
                 />
                 <div className="absolute bottom-3 right-3 text-xs text-gray-400">
                   {inputText.length} characters
@@ -194,9 +194,9 @@ const TextTranslation = () => {
               </div>
               
               <div className="relative">
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <label className="text-sm font-medium text-gray-700">Translation</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       className="p-1.5 text-gray-500 hover:text-gray-700 transition-colors"
                       onClick={() => speakText(translatedText, targetLanguage)}
@@ -214,7 +214,7 @@ const TextTranslation = () => {
                   </div>
                 </div>
                 <div 
-                  className={`w-full h-48 p-4 bg-gray-50 border border-gray-200 rounded-lg overflow-auto ${
+                  className={`w-full h-48 p-5 bg-gray-50 border border-gray-200 rounded-lg overflow-auto ${
                     isTranslating ? "animate-pulse" : ""
                   }`}
                 >
@@ -230,11 +230,11 @@ const TextTranslation = () => {
               </div>
             </div>
             
-            <div className="mt-8 flex justify-center">
+            <div className="mt-10 flex justify-center">
               <button
                 onClick={handleTranslate}
                 disabled={isTranslating || !inputText.trim()}
-                className={`translator-button ${
+                className={`translator-button px-8 py-3 text-lg ${
                   isTranslating ? "opacity-70 cursor-not-allowed" : ""
                 }`}
               >
