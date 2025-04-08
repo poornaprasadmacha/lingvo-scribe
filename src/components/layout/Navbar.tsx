@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -23,7 +22,6 @@ const Navbar = () => {
   const links = [
     { name: "Text", path: "/" },
     { name: "PDF", path: "/pdf" },
-    { name: "Webpage", path: "/webpage" },
     { name: "Chat", path: "/chat" },
     { name: "About Us", path: "/about" },
   ];

@@ -8,7 +8,6 @@ import { AnimatePresence } from "framer-motion";
 import { ThemeProvider } from "@/hooks/use-theme";
 import TextTranslation from "./pages/TextTranslation";
 import PdfTranslation from "./pages/PdfTranslation";
-import WebpageTranslation from "./pages/WebpageTranslation";
 import ChatTranslation from "./pages/ChatTranslation";
 import AboutUs from "./pages/AboutUs";
 import NotFound from "./pages/NotFound";
@@ -26,7 +25,6 @@ const App = () => (
             <Routes>
               <Route path="/" element={<TextTranslation />} />
               <Route path="/pdf" element={<PdfTranslation />} />
-              <Route path="/webpage" element={<WebpageTranslation />} />
               <Route path="/chat" element={<ChatTranslation />} />
               <Route path="/about" element={<AboutUs />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
