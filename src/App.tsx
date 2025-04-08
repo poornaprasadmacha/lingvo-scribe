@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { ThemeProvider } from "@/hooks/use-theme";
 import TextTranslation from "./pages/TextTranslation";
 import PdfTranslation from "./pages/PdfTranslation";
 import WebpageTranslation from "./pages/WebpageTranslation";
@@ -16,23 +17,25 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<TextTranslation />} />
-            <Route path="/pdf" element={<PdfTranslation />} />
-            <Route path="/webpage" element={<WebpageTranslation />} />
-            <Route path="/chat" element={<ChatTranslation />} />
-            <Route path="/about" element={<AboutUs />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AnimatePresence>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider defaultTheme="system" storageKey="translo-theme">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AnimatePresence mode="wait">
+            <Routes>
+              <Route path="/" element={<TextTranslation />} />
+              <Route path="/pdf" element={<PdfTranslation />} />
+              <Route path="/webpage" element={<WebpageTranslation />} />
+              <Route path="/chat" element={<ChatTranslation />} />
+              <Route path="/about" element={<AboutUs />} />
+              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AnimatePresence>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
