@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import { ArrowDown, ArrowUp, RotateCcw, Copy, Volume2, Mic, MicOff } from "lucide-react";
@@ -13,6 +12,7 @@ const TextTranslation = () => {
   const [sourceLanguage, setSourceLanguage] = useState("auto");
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
 
   // Speech recognition
   const [isListening, setIsListening] = useState(false);
@@ -122,12 +122,84 @@ const TextTranslation = () => {
   };
 
   const speakText = (text: string, lang: string) => {
-    if (!text) return;
-    
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lang === "auto" ? "en" : lang; // Default to English if auto
-    window.speechSynthesis.speak(utterance);
+    if (!text || isSpeaking) return;
+
+    try {
+      // Cancel any ongoing speech
+      window.speechSynthesis.cancel();
+      
+      const utterance = new SpeechSynthesisUtterance(text);
+      
+      // Convert language code to BCP 47 language tag format if needed
+      // This improves compatibility with speech synthesis
+      let speechLang = lang;
+      
+      // Handle 'auto' and convert 2-letter codes to language tags when needed
+      if (lang === "auto") {
+        speechLang = "en-US";
+      } else if (lang.length === 2) {
+        // Map common 2-letter codes to full language tags
+        const langMap: {[key: string]: string} = {
+          'en': 'en-US',
+          'es': 'es-ES',
+          'fr': 'fr-FR',
+          'de': 'de-DE',
+          'it': 'it-IT',
+          'pt': 'pt-PT',
+          'ru': 'ru-RU',
+          'zh': 'zh-CN',
+          'ja': 'ja-JP',
+          'ko': 'ko-KR',
+          'ar': 'ar-SA',
+          'hi': 'hi-IN',
+          // Add more mappings as needed
+        };
+        speechLang = langMap[lang] || lang;
+      }
+      
+      utterance.lang = speechLang;
+      
+      // Set up event handlers to track speaking state
+      utterance.onstart = () => setIsSpeaking(true);
+      utterance.onend = () => setIsSpeaking(false);
+      utterance.onerror = (event) => {
+        console.error("Speech synthesis error:", event);
+        toast.error("Failed to speak text. Try a different language.");
+        setIsSpeaking(false);
+      };
+      
+      // Find an appropriate voice for the selected language if available
+      const voices = speechSynthesis.getVoices();
+      const matchingVoice = voices.find(voice => voice.lang.startsWith(speechLang.split('-')[0]));
+      if (matchingVoice) {
+        utterance.voice = matchingVoice;
+      }
+      
+      window.speechSynthesis.speak(utterance);
+      toast.success(`Speaking in ${speechLang}`);
+    } catch (error) {
+      console.error("Speech synthesis error:", error);
+      toast.error("Speech synthesis failed.");
+      setIsSpeaking(false);
+    }
   };
+
+  useEffect(() => {
+    // Some browsers need a slight delay before getting voices
+    const loadVoices = () => {
+      speechSynthesis.getVoices();
+    };
+    
+    speechSynthesis.onvoiceschanged = loadVoices;
+    
+    // Initial load attempt
+    loadVoices();
+    
+    return () => {
+      // Cancel any ongoing speech when component unmounts
+      speechSynthesis.cancel();
+    };
+  }, []);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -151,7 +223,7 @@ const TextTranslation = () => {
 
   return (
     <Layout>
-      <div className="translator-container pt-36 pb-24 px-8 md:px-16"> {/* Added more padding */}
+      <div className="translator-container pt-36 pb-24 px-8 md:px-16">
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -212,9 +284,9 @@ const TextTranslation = () => {
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Source Text</label>
                   <div className="flex gap-2 md:gap-3">
                     <button
-                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors"
+                      className={`p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors ${isSpeaking ? 'text-blue-600 dark:text-blue-400' : ''}`}
                       onClick={() => speakText(inputText, sourceLanguage)}
-                      disabled={!inputText}
+                      disabled={!inputText || isSpeaking}
                       type="button"
                       aria-label="Speak source text"
                     >
@@ -270,9 +342,9 @@ const TextTranslation = () => {
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-200">Translation</label>
                   <div className="flex gap-3">
                     <button
-                      className="p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors"
+                      className={`p-1.5 text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white transition-colors ${isSpeaking ? 'text-blue-600 dark:text-blue-400' : ''}`}
                       onClick={() => speakText(translatedText, targetLanguage)}
-                      disabled={!translatedText}
+                      disabled={!translatedText || isSpeaking}
                       type="button"
                       aria-label="Speak translation"
                     >
@@ -325,4 +397,3 @@ const TextTranslation = () => {
 };
 
 export default TextTranslation;
-
