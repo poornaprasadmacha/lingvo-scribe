@@ -16,7 +16,8 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="translo-theme">
+    {/* Changed defaultTheme to 'light' to set daylight theme by default */}
+    <ThemeProvider defaultTheme="light" storageKey="translo-theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -27,6 +28,7 @@ const App = () => (
               <Route path="/pdf" element={<PdfTranslation />} />
               <Route path="/chat" element={<ChatTranslation />} />
               <Route path="/about" element={<AboutUs />} />
+              {/* Removed WebpageTranslation route */}
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
@@ -38,3 +40,4 @@ const App = () => (
 );
 
 export default App;
+
